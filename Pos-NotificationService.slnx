@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Core/">
+    <Project Path="Pos.NotificationService.Domain/Pos.NotificationService.Domain.csproj" />
+    <Project Path="Pos.NotificationService.Application/Pos.NotificationService.Application.csproj" />
+  </Folder>
+  <Folder Name="/Infrastructure/">
+    <Project Path="Pos.NotificationService.Infrastructure.Persistence/Pos.NotificationService.Infrastructure.Persistence.csproj" />
+    <Project Path="Pos.NotificationService.Infrastructure.Shared/Pos.NotificationService.Infrastructure.Shared.csproj" />
+  </Folder>
+  <Project Path="Pos.NotificationService.WebApi/Pos.NotificationService.WebApi.csproj" />
+</Solution>

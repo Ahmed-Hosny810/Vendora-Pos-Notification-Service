@@ -5,13 +5,13 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MediatR" Version="14.2.0"/>
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0"/>
-    <PackageReference Include="AutoMapper" Version="16.2.0"/>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.13"/>
-    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.13"/>
+    <PackageReference Include="MediatR" Version="14.2.0" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+    <PackageReference Include="AutoMapper" Version="16.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../Pos.NotificationService.Domain/Pos.NotificationService.Domain.csproj"/>
+    <ProjectReference Include="../Pos.NotificationService.Domain/Pos.NotificationService.Domain.csproj" />
   </ItemGroup>
 </Project>

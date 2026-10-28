@@ -1,6 +1,6 @@
 # Vendora Notification Service
 
-.NET 10 service foundation. Notification entities, migrations, RabbitMQ consumers and delivery workers are intentionally not implemented yet.
+.NET 10 service foundation. Notification entities and EF mappings are included. Migrations, RabbitMQ consumers and delivery workers are not implemented yet.
 
 ## Projects
 
@@ -39,3 +39,8 @@ RabbitMQ.Client and HttpClient infrastructure are available. Broker connections,
 
 Owned schema and migration history schema: notification.
 Liveness only verifies that the API is running, not database or broker readiness.
+
+## Entities
+Notification stores one recipient/channel message and its read/retry state. NotificationTemplate supports global defaults (null TenantId) and tenant overrides. NotificationDeliveryAttempt records provider attempts. InboxMessage deduplicates consumers; OutboxMessage stages outgoing events.
+
+Content is stored on Notification so template edits do not change old messages. Cross-service IDs have no foreign keys. Future handlers must validate recipient/channel combinations, tenant/template ownership and scope all reads to tenant/recipient. Background consumers obtain tenant scope from validated events rather than HTTP claims. No automatic tenant filter is applied to this worker-facing context.

@@ -44,3 +44,19 @@ Liveness only verifies that the API is running, not database or broker readiness
 Notification stores one recipient/channel message and its read/retry state. NotificationTemplate supports global defaults (null TenantId) and tenant overrides. NotificationDeliveryAttempt records provider attempts. InboxMessage deduplicates consumers; OutboxMessage stages outgoing events.
 
 Content is stored on Notification so template edits do not change old messages. Cross-service IDs have no foreign keys. Future handlers must validate recipient/channel combinations, tenant/template ownership and scope all reads to tenant/recipient. Background consumers obtain tenant scope from validated events rather than HTTP claims. No automatic tenant filter is applied to this worker-facing context.
+
+## Recipient client
+
+INotificationRecipientClient calls POST /api/v1/internal/notification-recipients.
+Identity must implement this endpoint before end-to-end use.
+
+Request: TenantId, optional BranchId, Roles (TenantOwner, Admin, Cashier, InventoryStaff).
+Identity should return active users from the specified tenant with ANY requested role, deduplicated.
+Tenant-wide owners/admins remain eligible with BranchId; branch-scoped staff require verified assignments. Reject unsupported branch scoping rather than returning all staff.
+
+Response: { "succeeded": true, "data": [ { "userId": "...", "fullName": "...", "email": null, "phoneNumber": null } ] }.
+A successful empty array is valid. HTTP errors, timeouts and malformed responses return failure; caller cancellation propagates.
+
+Configure IdentityRecipientClient:BaseUrl and IdentityRecipientClient:ApiKey through configuration/user secrets.
+The client sends X-Internal-Api-Key with a dedicated credential that Identity must authenticate.
+No user token, automatic retries, endpoint implementation or credential provisioning is included. Event processing owns bounded retries.

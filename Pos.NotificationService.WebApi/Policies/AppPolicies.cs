@@ -4,6 +4,7 @@ using OpenIddict.Validation.AspNetCore;
 namespace Pos.NotificationService.WebApi.Policies;
 public static class AppPolicies
 {
+    public const string ManageTemplates = "NotificationTemplates.Manage";
     public const string AccessOwnNotifications = "Notifications.Own";
     public static IServiceCollection AddAppPolicies(this IServiceCollection services)
     {
@@ -18,6 +19,19 @@ public static class AppPolicies
                 .Build();
             options.AddPolicy(AccessOwnNotifications, tenantPolicy);
             options.FallbackPolicy = tenantPolicy;
+            options.AddPolicy(ManageTemplates, policy =>
+            {
+                policy.AuthenticationSchemes.Add(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(context =>
+                {
+                    var user = context.User;
+                    if (!Guid.TryParse(user.FindFirstValue("sub") ?? user.FindFirstValue(ClaimTypes.NameIdentifier),
+                        out var userId) || userId == Guid.Empty) return false;
+                    return user.FindFirstValue("user_type") == "Platform" &&
+                        (user.IsInRole("Admin") || user.IsInRole("SuperAdmin"));
+                });
+            });
         });
         // Billing notifications remain accessible after subscription expiry.
         // Future handlers must filter by both TenantId and RecipientUserId.

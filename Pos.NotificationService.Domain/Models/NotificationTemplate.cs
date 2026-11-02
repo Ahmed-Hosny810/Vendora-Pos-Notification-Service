@@ -5,7 +5,6 @@ namespace Pos.NotificationService.Domain.Models;
 public class NotificationTemplate
 {
     public Guid Id { get; set; }
-    public Guid? TenantId { get; set; }
     public string Code { get; set; } = string.Empty;
     public string Channel { get; set; } = NotificationChannels.InApp;
     public string Language { get; set; } = "en";

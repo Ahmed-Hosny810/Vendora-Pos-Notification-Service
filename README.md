@@ -41,9 +41,9 @@ Owned schema and migration history schema: notification.
 Liveness only verifies that the API is running, not database or broker readiness.
 
 ## Entities
-Notification stores one recipient/channel message and its read/retry state. NotificationTemplate supports global defaults (null TenantId) and tenant overrides. NotificationDeliveryAttempt records provider attempts. InboxMessage deduplicates consumers; OutboxMessage stages outgoing events.
+Notification stores one recipient/channel message and its read/retry state. NotificationTemplate stores platform-managed templates shared across tenants. NotificationDeliveryAttempt records provider attempts. InboxMessage deduplicates consumers; OutboxMessage stages outgoing events.
 
-Content is stored on Notification so template edits do not change old messages. Cross-service IDs have no foreign keys. Future handlers must validate recipient/channel combinations, tenant/template ownership and scope all reads to tenant/recipient. Background consumers obtain tenant scope from validated events rather than HTTP claims. No automatic tenant filter is applied to this worker-facing context.
+Content is stored on Notification so template edits do not change old messages. Cross-service IDs have no foreign keys. Future handlers must validate recipient/channel combinations, scope all reads to tenant/recipient. Background consumers obtain tenant scope from validated events rather than HTTP claims. No automatic tenant filter is applied to this worker-facing context.
 
 ## Recipient client
 
@@ -60,3 +60,41 @@ A successful empty array is valid. HTTP errors, timeouts and malformed responses
 Configure IdentityRecipientClient:BaseUrl and IdentityRecipientClient:ApiKey through configuration/user secrets.
 The client sends X-Internal-Api-Key with a dedicated credential that Identity must authenticate.
 No user token, automatic retries, endpoint implementation or credential provisioning is included. Event processing owns bounded retries.
+
+## Create notification templates
+
+POST /api/v1/notification-templates with an Identity bearer token.
+Only Platform Admin/SuperAdmin users can create templates. Tenant users cannot manage templates.
+Templates have no TenantId; notifications retain their tenant and recipient ownership.
+Codes are stored trimmed and uppercase; language tags trimmed and lowercase. Channel values use the defined constants exactly.
+Duplicate code/channel/language combinations are rejected across the platform, including inactive templates.
+Body is limited to 20,000 characters at the API boundary.
+
+Example:
+{
+  "code": "LowStockDetected",
+  "channel": "InApp",
+  "language": "en",
+  "subject": "Low stock alert",
+  "body": "Product {{ProductId}} has {{QuantityOnHand}} units remaining."
+}
+
+Creation stores template text; INotificationTemplateService selects and renders it when creating notifications.
+Apply the existing model migration before calling the endpoint. This feature does not apply database migrations.
+
+
+## Template lookup and rendering
+
+Inject INotificationTemplateService and call RenderAsync with code, channel, language,
+placeholder values and cancellation token. One read-only query finds the active platform
+template by Code, Channel and Language. There is no tenant or language fallback.
+Subject becomes Title; placeholders are replaced with the supplied values.
+Missing values, malformed placeholders, missing templates and titles exceeding 200
+characters return Result failures. Replacement is a single pass; values are not rendered
+recursively. Callers format dates and numbers before passing strings.
+Content is plain text, not HTML. The service returns TemplateId, Title and Body;
+it does not save or send notifications.
+
+After this model change, create and review a PlatformManagedTemplates migration before
+updating the database. Existing tenant templates must be reviewed for duplicate
+Code/Channel/Language combinations before the platform-wide unique index can be applied.

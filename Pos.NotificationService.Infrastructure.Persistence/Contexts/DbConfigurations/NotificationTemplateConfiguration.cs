@@ -18,11 +18,8 @@ public class NotificationTemplateConfiguration : IEntityTypeConfiguration<Notifi
         builder.Property(x => x.Body).IsRequired();
         builder.Property(x => x.RowVersion).IsRowVersion();
 
-        // Separate indexes cover global defaults and tenant overrides.
-        builder.HasIndex(x => new { x.TenantId, x.Code, x.Channel, x.Language })
-            .IsUnique().HasFilter("[TenantId] IS NOT NULL");
         builder.HasIndex(x => new { x.Code, x.Channel, x.Language })
-            .IsUnique().HasFilter("[TenantId] IS NULL");
+            .IsUnique();
 
     }
 }

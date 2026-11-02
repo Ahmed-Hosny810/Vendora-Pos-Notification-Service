@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pos.NotificationService.Application.Behaviours;
 using System.Reflection;
+using Pos.NotificationService.Application.Interfaces.Services;
+using Pos.NotificationService.Application.Services;
 
 namespace Pos.NotificationService.Application
 {
@@ -14,6 +16,7 @@ namespace Pos.NotificationService.Application
             services.AddAutoMapper(cfg =>
                 cfg.AddMaps(Assembly.GetExecutingAssembly())
             );
+            services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
             services.AddMediatR(cfg =>
                 cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));

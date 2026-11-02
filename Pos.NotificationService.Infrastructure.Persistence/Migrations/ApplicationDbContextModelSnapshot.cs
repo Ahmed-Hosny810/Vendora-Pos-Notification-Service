@@ -247,21 +247,13 @@ namespace Pos.NotificationService.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<Guid?>("TenantId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
                     b.HasIndex("Code", "Channel", "Language")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NULL");
-
-                    b.HasIndex("TenantId", "Code", "Channel", "Language")
-                        .IsUnique()
-                        .HasFilter("[TenantId] IS NOT NULL");
+                        .IsUnique();
 
                     b.ToTable("NotificationTemplates", "notification");
                 });

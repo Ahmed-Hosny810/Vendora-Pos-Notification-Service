@@ -5,7 +5,7 @@ using Pos.NotificationService.Application.Interfaces.Services;
 using Pos.NotificationService.Application.Wrappers;
 using Pos.NotificationService.Domain.Constants;
 
-namespace Pos.NotificationService.Application.Services;
+namespace Pos.NotificationService.Application.Features.NotificationTemplates.Services;
 
 public class NotificationTemplateService : INotificationTemplateService
 {

@@ -32,7 +32,6 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
             .IsUnique().HasFilter("[SourceEventId] IS NOT NULL AND [RecipientUserId] IS NULL AND [RecipientEmail] IS NOT NULL");
         builder.HasIndex(x => new { x.TenantId, x.SourceEventId, x.RecipientPhone, x.Channel, x.Type })
             .IsUnique().HasFilter("[SourceEventId] IS NOT NULL AND [RecipientUserId] IS NULL AND [RecipientPhone] IS NOT NULL");
-        // Handlers must verify that a template is global or belongs to this tenant.
         builder.HasOne(x => x.Template).WithMany(x => x.Notifications)
             .HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Restrict);
 

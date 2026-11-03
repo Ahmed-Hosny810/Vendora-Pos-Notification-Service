@@ -15,6 +15,7 @@ public static class InfrastructureServicesRegistration
             sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "notification")));
         services.AddScoped(typeof(IGenericRepositoryAsync<,>), typeof(GenericRepositoryAsync<,>));
         services.AddScoped<IUnitOfWork, UnitOfWork.UnitOfWork>();
+        services.AddScoped<INotificationRepositoryAsync, NotificationRepositoryAsync>();
         services.AddScoped<INotificationTemplateRepositoryAsync, NotificationTemplateRepositoryAsync>();
         return services;
     }

@@ -98,3 +98,25 @@ it does not save or send notifications.
 After this model change, create and review a PlatformManagedTemplates migration before
 updating the database. Existing tenant templates must be reviewed for duplicate
 Code/Channel/Language combinations before the platform-wide unique index can be applied.
+
+## In-app notification creation
+
+INotificationCreationService.CreateAsync accepts CreateNotificationRequest containing
+TenantId, SourceEventId, TemplateCode, language, recipient roles, placeholder Values,
+and optional branch/reference fields. Channel currently supports InApp only.
+TemplateCode is normalized into Notification.Type and is limited to 80 characters.
+
+The service explicitly validates worker input, resolves active tenant recipients through
+Identity, deduplicates user IDs, renders once, and stages one record per recipient.
+No recipients returns success with count zero. Lookup/rendering failures return Result
+failures; caller cancellation propagates. No records are staged before lookup/rendering
+succeed. In-app records use Sent/SentAt because they become available on commit;
+ReadAt remains null. Recipient email/phone are not stored for this in-app flow.
+
+The result count describes staged records, not committed records. The dispatcher must
+check the inbox first, then commit notifications and its inbox record in the same local
+transaction and acknowledge only after success. On failure/cancellation, discard the
+scope and its tracked changes. Do not save failed work. This service does not independently
+deduplicate redelivered events; the inbox and existing notification uniqueness indexes
+provide that protection. No endpoint, migration, RabbitMQ consumer or email worker is
+added by this feature.

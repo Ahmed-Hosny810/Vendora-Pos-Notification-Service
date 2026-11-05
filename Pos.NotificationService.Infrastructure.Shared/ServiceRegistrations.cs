@@ -1,6 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Pos.NotificationService.Application.Interfaces.Services;
+using Pos.NotificationService.Infrastructure.Shared.Services;
+using Pos.NotificationService.Infrastructure.Shared.Workers;
 using Pos.NotificationService.Application.Interfaces.Clients;
 using Pos.NotificationService.Infrastructure.Shared.Clients;
 using Pos.NotificationService.Infrastructure.Shared.Options;
@@ -24,6 +27,27 @@ public static class ServiceRegistrations
             client.BaseAddress = new Uri(options.BaseUrl.TrimEnd('/') + "/");
             client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
         }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+
+        services.AddScoped<IInboxEventDispatcher, InboxEventDispatcher>();
+        services.Configure<RabbitMqOptions>(configuration.GetSection("RabbitMq"));
+        services.Configure<RabbitMqConsumerOptions>(configuration.GetSection("RabbitMqConsumer"));
+
+        if (configuration.GetValue<bool>("RabbitMqConsumer:Enabled"))
+        {
+            services.AddOptions<RabbitMqOptions>()
+                .Validate(x => !string.IsNullOrWhiteSpace(x.HostName) && x.Port is > 0 and <= 65535 &&
+                    !string.IsNullOrWhiteSpace(x.UserName) && !string.IsNullOrWhiteSpace(x.Password) &&
+                    !string.IsNullOrWhiteSpace(x.VirtualHost), "RabbitMQ connection settings are required.")
+                .ValidateOnStart();
+            services.AddOptions<RabbitMqConsumerOptions>()
+                .Validate(x => !string.IsNullOrWhiteSpace(x.SourceExchangeName) &&
+                    !string.IsNullOrWhiteSpace(x.QueueName) && !string.IsNullOrWhiteSpace(x.DeadLetterExchange) &&
+                    !string.IsNullOrWhiteSpace(x.DeadLetterQueue) &&
+                    x.RoutingKeys is { Length: > 0 } && x.RoutingKeys.All(k => !string.IsNullOrWhiteSpace(k)) &&
+                    x.PrefetchCount > 0 && x.MaxDeliveryAttempts > 0, "Invalid RabbitMQ consumer settings.")
+                .ValidateOnStart();
+            services.AddHostedService<RabbitMqConsumerWorker>();
+        }
 
         return services;
     }

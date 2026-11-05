@@ -1,6 +1,6 @@
 # Vendora Notification Service
 
-.NET 10 service foundation. Notification entities and EF mappings are included. Migrations, RabbitMQ consumers and delivery workers are not implemented yet.
+.NET 10 service foundation. Notification entities and EF mappings are included. RabbitMQ inbox consumption is included; external delivery workers are not implemented yet.
 
 ## Projects
 
@@ -30,7 +30,7 @@ Future notification queries must also scope records to the recipient, not only t
 
 For deployment set ConnectionStrings__DefaultConnection and Services__Identity__Issuer through configuration/secrets. Do not commit provider credentials or API keys.
 
-RabbitMQ.Client and HttpClient infrastructure are available. Broker connections, consumers and email providers are added with their business features; startup does not contact RabbitMQ.
+RabbitMQ.Client and HttpClient infrastructure are available. The consumer connects when RabbitMqConsumer:Enabled is true; email sending is not implemented.
 
 ## EF migrations (after models exist)
 
@@ -55,7 +55,7 @@ Identity should return active users from the specified tenant with ANY requested
 Tenant-wide owners/admins remain eligible with BranchId; branch-scoped staff require verified assignments. Reject unsupported branch scoping rather than returning all staff.
 
 Response: { "succeeded": true, "data": [ { "userId": "...", "fullName": "...", "email": null, "phoneNumber": null } ] }.
-A successful empty array is valid. HTTP errors, timeouts and malformed responses return failure; caller cancellation propagates.
+A successful empty array is valid. Permanent HTTP errors and malformed responses return failure. Network failures, timeouts and HTTP 408/429/5xx throw for consumer retry; caller cancellation propagates.
 
 Configure IdentityRecipientClient:BaseUrl and IdentityRecipientClient:ApiKey through configuration/user secrets.
 The client sends X-Internal-Api-Key with a dedicated credential that Identity must authenticate.
@@ -120,3 +120,44 @@ scope and its tracked changes. Do not save failed work. This service does not in
 deduplicate redelivered events; the inbox and existing notification uniqueness indexes
 provide that protection. No endpoint, migration, RabbitMQ consumer or email worker is
 added by this feature.
+
+
+## RabbitMQ inbox consumer
+
+RabbitMqConsumerWorker mirrors Inventory: it owns connection, topology, manual
+acknowledgements and a fresh DI scope per delivery. InboxEventDispatcher selects the
+handler by Type, checks EventId/TenantId against MessageId, deduplicates using
+(MessageId, ConsumerName), and saves notifications plus InboxMessage atomically.
+An already processed event is acknowledged without running the handler again.
+
+Main queue: notification.inventory-events (durable quorum, delivery limit 5).
+Source topic exchange: inventory.events.
+Binding: inventory.low-stock.detected.v1.
+Dead-letter direct exchange: notification.inventory-events.dlx.
+Dead-letter queue: notification.inventory-events.dlq (durable, broker-default type).
+Dead-letter routing key: dead.
+Exceptions requeue immediately, bounded by delivery limit; no delayed retry queue.
+Permanent Result failures and malformed envelopes dead-letter immediately.
+The copied topology does not configure at-least-once dead-letter forwarding.
+Quorum replication requires multiple broker nodes, not one development container.
+
+LowStockDetectedHandler targets TenantOwner/Admin, language en, channel InApp.
+The contract matches Inventory's DetectedAt field (there is no OccurredAt).
+Placeholders: AlertId, BranchId, ProductId, ProductVariantId, QuantityOnHand,
+Threshold, DetectedAt. ProductName is not provided by Inventory.
+ReferenceType is LowStockAlert and ReferenceId is AlertId.
+No recipients is successful processing with zero notifications and a committed inbox.
+
+Before enabling:
+1. Apply existing migrations, including the platform-template change.
+2. Set RabbitMq credentials through secrets, matching Inventory's broker/vhost and
+   SourceExchangeName. Configure the Identity recipient key.
+3. Create active LOWSTOCKDETECTED / InApp / en template. Example body:
+   Product {{ProductId}} has {{QuantityOnHand}} units remaining (threshold {{Threshold}}).
+4. Set RabbitMqConsumer:Enabled to true and restart. Provision queues/bindings before
+   publishing events that must reach this service.
+5. Trigger low stock and inspect Notifications/InboxMessages. Inspect failed messages
+   in the DLQ; replay after fixing the problem with the same MessageId, Type and payload.
+
+Consumer disabled by default; credentials intentionally empty. No new migration,
+email delivery worker or outgoing publisher is included in this implementation.

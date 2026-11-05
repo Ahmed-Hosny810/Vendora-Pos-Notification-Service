@@ -53,6 +53,10 @@ public class NotificationRecipientClient : INotificationRecipientClient
         try
         {
             using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            // These failures can recover; let the consumer requeue instead of dead-lettering immediately.
+            if ((int)response.StatusCode >= 500 || (int)response.StatusCode is 408 or 429)
+                throw new HttpRequestException($"Identity recipient lookup temporarily failed: {(int)response.StatusCode}.");
+
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Identity recipient lookup returned HTTP {StatusCode}.", (int)response.StatusCode);
@@ -73,11 +77,7 @@ public class NotificationRecipientClient : INotificationRecipientClient
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return Result<IReadOnlyList<NotificationRecipientDto>>.Failure("Identity recipient lookup timed out.");
-        }
-        catch (HttpRequestException)
-        {
-            return Result<IReadOnlyList<NotificationRecipientDto>>.Failure("Identity service is unavailable.");
+            throw new TimeoutException("Identity recipient lookup timed out.");
         }
         catch (JsonException)
         {

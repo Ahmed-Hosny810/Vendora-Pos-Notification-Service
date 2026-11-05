@@ -17,6 +17,8 @@ namespace Pos.NotificationService.Application
             services.AddAutoMapper(cfg =>
                 cfg.AddMaps(Assembly.GetExecutingAssembly())
             );
+            services.AddScoped<IIntegrationEventHandler,
+                Features.Notifications.EventHandlers.LowStockDetectedHandler>();
             services.AddScoped<INotificationCreationService, NotificationCreationService>();
             services.AddScoped<INotificationTemplateService, NotificationTemplateService>();
             services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());

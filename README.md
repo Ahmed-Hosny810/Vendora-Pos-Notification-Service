@@ -161,3 +161,19 @@ Before enabling:
 
 Consumer disabled by default; credentials intentionally empty. No new migration,
 email delivery worker or outgoing publisher is included in this implementation.
+
+## Platform template management
+
+All notification-template endpoints require a Platform Admin/SuperAdmin.
+GET /api/v1/notification-templates returns a paginated DTO list.
+Optional Parameter.Filter fields: Code (contains), Channel, Language, IsActive.
+Parameter.OrderKey supports CreatedAt or Code; OrderDescending defaults true.
+GET /api/v1/notification-templates/{id} returns details including RowVersion.
+PUT /api/v1/notification-templates/{id} updates Code, Channel, Language, Subject,
+Body and requires the latest RowVersion (base64 in JSON).
+PATCH /api/v1/notification-templates/{id}/active-status accepts IsActive and RowVersion.
+TemplateId can be omitted from the body; if supplied it must match the route.
+Reload details after an update to obtain the new RowVersion.
+Stale versions and duplicate Code/Channel/Language combinations return failures.
+EF row-version checks protect against changes occurring after the initial load.
+Existing notification text is preserved; no template deletion endpoint is provided.

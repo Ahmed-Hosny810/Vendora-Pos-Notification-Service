@@ -17,6 +17,10 @@ public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
         {
             return Result<int>.Success(await SaveChangesAsync(cancellationToken));
         }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Result<int>.Failure("The record changed while saving. Reload it and try again.");
+        }
         catch (DbUpdateException exception) when (
             exception.InnerException is SqlException { Number: 2601 or 2627 })
         {
